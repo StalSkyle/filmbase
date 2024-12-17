@@ -1,0 +1,108 @@
+{% extends 'films/base.html' %}
+{% load films_tags %}
+
+{% block breadcrumb %}
+  <nav>
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a href="{% url 'films:film_list' %}">{{ 'films:film'|model_verbose_name_plural }}</a>
+      </li>
+      <li class="breadcrumb-item active">{{ film.name }}</li>
+    </ol>
+  </nav>
+{% endblock %}
+
+{% block content %}
+  <div class="row">
+    <div class="col-md-3">
+      {% if film.cover %}
+        <img src="{{ film.cover.url }}" alt="{{ film.name }}" class="img-thumbnail" />
+      {% endif %}
+      {% if user.is_superuser %}
+      <div class="d-grid gap-2 my-4">
+        <a href="{% url 'films:film_update' film.id %}" class="btn btn-primary btn-block">
+          <i class="bi-pencil-square"></i>
+          Редактировать
+        </a>
+        <a href="{% url 'films:film_delete' film.id %}" class="btn btn-danger btn-block">
+          <i class="bi-trash"></i>
+          Удалить
+        </a>
+      </div>
+      {% endif %}
+    </div>
+    <div class="col-md-9">
+      <div class="card">
+        <div class="card-body">
+          <h1 class="card-title">{{ film.name }}</h1>
+          {% if film.origin_name %}
+            <h2 class="card-subtitle mb-2 text-body-secondary">{{ film.origin_name }}</h2>
+          {% endif %}
+          <dl class="row">
+            {% if film.country %}
+              <dt class="col-md-3 text-md-end">
+                {% verbose_name film 'country' %}
+              </dt>
+              <dd class="col-md-9"><a href="{% url 'films:country_detail' film.country.id %}">{{ film.country.name }}</a></dd>
+            {% endif %}
+
+            {% if film.genres %}
+              <dt class="col-md-3 text-md-end">
+                {% verbose_name film 'genres' %}
+              </dt>
+              <dd class="col-md-9">
+                {% for genre in film.genres.all %}
+                  <a href="{% url 'films:genre_detail' genre.id %}">{{ genre.name }}</a>{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+              </dd>
+            {% endif %}
+            {% if film.length %}
+              <dt class="col-md-3 text-md-end">
+                {% verbose_name film 'length' %}
+              </dt>
+              <dd class="col-md-9">
+                {{ film.length }}
+                {{ film.length|ru_plural:'минута,минуты,минут' }}
+              </dd>
+            {% endif %}
+
+            {% if film.year %}
+              <dt class="col-md-3 text-md-end">
+                {% verbose_name film 'year' %}
+              </dt>
+              <dd class="col-md-9">{{ film.year }}</dd>
+            {% endif %}
+
+            {% if film.description %}
+              <dt class="col-md-3 text-md-end">
+                {% verbose_name film 'description' %}
+              </dt>
+              <dd class="col-md-9">{{ film.description }}</dd>
+            {% endif %}
+            {% if film.director %}
+              <dt class="col-md-3 text-md-end">
+                {% verbose_name film 'director' %}
+              </dt>
+              <dd class="col-md-9"><a href="{% url 'films:person_detail' film.director.id %}">{{ film.director.name }}</a></dd>
+            {% endif %}
+            {% if film.people %}
+              <dt class="col-md-3 text-md-end">
+                {% verbose_name film 'people' %}
+              </dt>
+              <dd class="col-md-9">
+                {% for person in film.people.all %}
+                  <a href="{% url 'films:person_detail' person.id %}">{{ person.name }}</a>{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+              </dd>
+            {% endif %}
+          </dl>
+          {% if film.trailer_url %}
+            <div class="ratio ratio-16x9">
+              <iframe src="{{ film.trailer_url }}" title="YouTube video" allowfullscreen></iframe>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endblock %}

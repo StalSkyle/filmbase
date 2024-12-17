@@ -1,0 +1,85 @@
+{% extends 'films/base.html' %}
+{% load films_tags %}
+
+{% block breadcrumb %}
+  <nav>
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a href="{% url 'films:person_list' %}">{{ 'films:person'|model_verbose_name_plural }}</a>
+      </li>
+      <li class="breadcrumb-item active">{{ person.name }}</li>
+    </ol>
+  </nav>
+{% endblock %}
+
+{% block content %}
+  <div class="row">
+    <div class="col-md-3">
+      {% if person.photo %}
+        <img src="{{ person.photo.url }}" alt="{{ person.name }}" class="img-thumbnail" />
+      {% endif %}
+      {% if user.is_superuser %}
+      <div class="d-grid gap-2 my-4">
+        <a href="{% url 'films:person_update' person.id %}" class="btn btn-primary btn-block">
+          <i class="bi-pencil-square"></i>
+          Редактировать
+        </a>
+        <a href="{% url 'films:person_delete' person.id %}" class="btn btn-danger btn-block">
+          <i class="bi-trash"></i>
+          Удалить
+        </a>
+      </div>
+      {% endif %}
+    </div>
+    <div class="col-md-9">
+      <div class="card">
+        <div class="card-body">
+          <h1 class="card-title">{{ person.name }}</h1>
+          {% if person.origin_name %}
+            <h2 class="card-subtitle mb-2 text-body-secondary">{{ person.origin_name }}</h2>
+          {% endif %}
+          <dl class="row">
+            {% if person.birthday %}
+              <dt class="col-md-3 text-md-end">
+                {% verbose_name person 'birthday' %}
+              </dt>
+              <dd class="col-md-9">
+                {{ person.birthday|date }}
+                <span class="ml-2 text-body-secondary">
+                  {{ person.age }}
+                  {{ person.age|ru_plural:'год,года,лет' }}
+                </span>
+              </dd>
+            {% endif %}
+            {% if person.directed_films.all %}
+              <dt class="col-md-3 text-md-end">
+                {% verbose_name person.directed_films.all.0 'director' %}
+              </dt>
+              <dd class="col-md-9">
+                <ol>
+                  {% for film in person.directed_films.all %}
+                    <li>
+                      <a href="{% url 'films:film_detail' film.id %}">{{ film.name }}</a>
+                    </li>
+                  {% endfor %}
+                </ol>
+              </dd>
+            {% endif %}
+            {% if person.film_set.all %}
+              <dt class="col-md-3 text-md-end">{{ 'films:film'|model_verbose_name_plural }}</dt>
+              <dd class="col-md-9">
+                <ol>
+                  {% for film in person.film_set.all %}
+                    <li>
+                      <a href="{% url 'films:film_detail' film.id %}">{{ film.name }}</a>
+                    </li>
+                  {% endfor %}
+                </ol>
+              </dd>
+            {% endif %}
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
