@@ -1,6 +1,6 @@
 from dal import autocomplete
 from django.shortcuts import get_object_or_404, redirect, render
-from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.decorators import user_passes_test, login_required
 from .models import Country, Film, Genre, Person
 from .forms import CountryForm, GenreForm, FilmForm, PersonForm
 from .helpers import paginate
@@ -229,6 +229,7 @@ def person_delete(request, id):
     return render(request, 'films/person/delete.html',
                   {'person': person})
 
+@login_required(login_url='login')
 def notifications_list(request):
     countries = Country.objects.all()
     return render(request, 'films/notifications.html', {'countries': countries})
