@@ -3,53 +3,50 @@
 
 {% block content %}
   <h1>Подписка на уведомления</h1>
-  <p>Выберите предпочтения для уведомлений:</p>
+  <p>Выберите предпочтения для уведомлений и укажите вашу почту:</p>
 
   <form method="post" action="{% url 'films:notifications' %}">
     {% csrf_token %}
 
-    <div class="mb-3">
-      <label class="form-label">Частота уведомлений:</label>
+    <fieldset>
+      <legend class="form-label">Частота уведомлений:</legend>
+      <div class="form-check">
+        <input class="form-check-input" type="radio" name="frequency" id="instant" value="instant">
+        <label class="form-check-label" for="instant">Как только произошли изменения</label>
+      </div>
       <div class="form-check">
         <input class="form-check-input" type="radio" name="frequency" id="daily" value="daily">
-        <label class="form-check-label" for="daily">
-          Раз в день
-        </label>
+        <label class="form-check-label" for="daily">Раз в день</label>
       </div>
       <div class="form-check">
         <input class="form-check-input" type="radio" name="frequency" id="weekly" value="weekly">
-        <label class="form-check-label" for="weekly">
-          Раз в неделю
-        </label>
+        <label class="form-check-label" for="weekly">Раз в неделю</label>
       </div>
       <div class="form-check">
         <input class="form-check-input" type="radio" name="frequency" id="monthly" value="monthly">
-        <label class="form-check-label" for="monthly">
-          Раз в месяц
-        </label>
+        <label class="form-check-label" for="monthly">Раз в месяц</label>
       </div>
-    </div>
+    </fieldset>
+
+    <fieldset>
+      <legend class="form-label">Тип уведомлений:</legend>
+      <div class="form-check">
+        <input class="form-check-input" type="radio" name="notification_type" id="add" value="add">
+        <label class="form-check-label" for="add">Добавление нового фильма</label>
+      </div>
+      <div class="form-check">
+        <input class="form-check-input" type="radio" name="notification_type" id="add_change" value="add_change">
+        <label class="form-check-label" for="add_change">Добавление нового фильма или изменение имеющегося</label>
+      </div>
+      <div class="form-check">
+        <input class="form-check-input" type="radio" name="notification_type" id="everything" value="everything">
+        <label class="form-check-label" for="everything">Все изменения</label>
+      </div>
+    </fieldset>
 
     <div class="mb-3">
-      <label class="form-label">Тип уведомлений:</label>
-      <div class="form-check">
-        <input class="form-check-input" type="radio" name="notification_type" id="new_films" value="new_films">
-        <label class="form-check-label" for="new_films">
-          Добавление нового фильма
-        </label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="radio" name="notification_type" id="new_or_updated" value="new_or_updated">
-        <label class="form-check-label" for="new_or_updated">
-          Добавление нового фильма или изменение имеющегося
-        </label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="radio" name="notification_type" id="all_changes" value="all_changes">
-        <label class="form-check-label" for="all_changes">
-          Все изменения
-        </label>
-      </div>
+      <label for="email" class="form-label">Ваша почта:</label>
+      <input type="email" class="form-control" id="email" name="email" required>
     </div>
 
     <button type="submit" class="btn btn-primary" id="savePreferences">Сохранить предпочтения</button>
@@ -57,6 +54,7 @@
       <p>Выбранные настройки:</p>
       <p id="selectedFrequency"></p>
       <p id="selectedNotificationType"></p>
+      <p id="userEmail"></p>
     </div>
   </form>
 
@@ -69,10 +67,13 @@
         var frequency = $('input[name=frequency]:checked').val();
         // Get selected notification type
         var notificationType = $('input[name=notification_type]:checked').val();
+        // Get user email
+        var userEmail = $('#email').val();
 
         // Set the text in the display div
         $('#selectedFrequency').text('Частота: ' + frequency);
         $('#selectedNotificationType').text('Тип уведомлений: ' + notificationType);
+        $('#userEmail').text('Ваша почта: ' + userEmail);
 
         // Show the display div
         $('#selectedPreferences').removeClass('d-none');

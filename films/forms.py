@@ -61,6 +61,7 @@ class NotificationSettingsForm(forms.ModelForm):
     ]
 
     PERIOD_CHOICES = [
+        ('instant', 'Как только произошли изменения'),
         ('daily', 'Раз в день'),
         ('weekly', 'Раз в неделю'),
         ('monthly', 'Раз в месяц'),

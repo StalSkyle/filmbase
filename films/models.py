@@ -108,10 +108,13 @@ class NotificationSettings(MyModel):
     ]
 
     PERIOD_CHOICES = [
+        ('instant', 'Как только произошли изменения'),
         ('daily', 'Раз в день'),
         ('weekly', 'Раз в неделю'),
         ('monthly', 'Раз в месяц'),
     ]
+    user_mail = models.CharField(
+        "Почта пользователя", max_length=1024, blank=True, null=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE,
                                 related_name='notification_settings')
     notification_types = models.CharField(max_length=20, default='everything')
