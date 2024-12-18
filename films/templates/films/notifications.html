@@ -58,26 +58,4 @@
     </div>
   </form>
 
-  <script>
-    $(document).ready(function() {
-      $('#savePreferences').click(function(event) {
-        event.preventDefault(); // Prevent form submission
-
-        // Get selected frequency
-        var frequency = $('input[name=frequency]:checked').val();
-        // Get selected notification type
-        var notificationType = $('input[name=notification_type]:checked').val();
-        // Get user email
-        var userEmail = $('#email').val();
-
-        // Set the text in the display div
-        $('#selectedFrequency').text('Частота: ' + frequency);
-        $('#selectedNotificationType').text('Тип уведомлений: ' + notificationType);
-        $('#userEmail').text('Ваша почта: ' + userEmail);
-
-        // Show the display div
-        $('#selectedPreferences').removeClass('d-none');
-      });
-    });
-  </script>
 {% endblock %}

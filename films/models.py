@@ -120,5 +120,9 @@ class NotificationSettings(MyModel):
     notification_types = models.CharField(max_length=20, default='everything')
     notification_period = models.CharField(max_length=20, default='daily')
 
+    class Meta:
+        verbose_name = 'Notification Setting'
+        verbose_name_plural = 'Notification Settings'
+
     def __str__(self):
         return "Настройки уведомлений"

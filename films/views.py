@@ -1,7 +1,7 @@
 from dal import autocomplete
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import user_passes_test, login_required
-from .models import Country, Film, Genre, Person
+from .models import Country, Film, Genre, Person, NotificationSettings
 from .forms import CountryForm, GenreForm, FilmForm, PersonForm
 from .helpers import paginate
 from django.contrib import messages
@@ -231,8 +231,30 @@ def person_delete(request, id):
 
 @login_required(login_url='login')
 def notifications_list(request):
-    countries = Country.objects.all()
-    return render(request, 'films/notifications.html', {'countries': countries})
+    if request.method == 'POST':
+        frequency = request.POST.get('frequency')
+        notification_type = request.POST.get('notification_type')
+        email = request.POST.get('email')
+
+        # Retrieve or create the NotificationSettings for the user
+        notification_settings, created = NotificationSettings.objects.get_or_create(
+            user=request.user)
+
+        # Update the fields
+        notification_settings.notification_period = frequency
+        notification_settings.notification_types = notification_type
+        notification_settings.user_mail = email
+
+        notification_settings.save()
+
+        # Optionally, add a success message
+        # messages.success(request, 'Preferences saved successfully.')
+
+        return redirect(
+            'films:notifications')  # Redirect to the same page or another page
+
+    return render(request,
+                  'films/notifications.html')
 
 
 class PersonAutocomplete(autocomplete.Select2QuerySetView):
