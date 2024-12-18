@@ -5,6 +5,7 @@ from .models import Country, Film, Genre, Person, NotificationSettings
 from .forms import CountryForm, GenreForm, FilmForm, PersonForm
 from .helpers import paginate
 from django.contrib import messages
+from django.contrib.auth.models import User
 
 
 def check_admin(user):
@@ -231,6 +232,8 @@ def person_delete(request, id):
 
 @login_required(login_url='login')
 def notifications_list(request):
+    notification_settings, created = NotificationSettings.objects.get_or_create(
+        user=request.user)
     if request.method == 'POST':
         frequency = request.POST.get('frequency')
         notification_type = request.POST.get('notification_type')
@@ -247,14 +250,13 @@ def notifications_list(request):
 
         notification_settings.save()
 
-        # Optionally, add a success message
-        # messages.success(request, 'Preferences saved successfully.')
+        # сообщение об успехе
+        messages.success(request, 'Изменения успешно сохранены')
 
         return redirect(
             'films:notifications')  # Redirect to the same page or another page
 
-    return render(request,
-                  'films/notifications.html')
+    return render(request, 'films/notifications.html', {'settings': notification_settings})
 
 
 class PersonAutocomplete(autocomplete.Select2QuerySetView):

@@ -11,19 +11,19 @@
     <fieldset>
       <legend class="form-label">Частота уведомлений:</legend>
       <div class="form-check">
-        <input class="form-check-input" type="radio" name="frequency" id="instant" value="instant">
+        <input class="form-check-input" type="radio" name="frequency" id="instant" value="instant" {% if settings.notification_period == 'instant' %}checked{% endif %}>
         <label class="form-check-label" for="instant">Как только произошли изменения</label>
       </div>
       <div class="form-check">
-        <input class="form-check-input" type="radio" name="frequency" id="daily" value="daily">
+        <input class="form-check-input" type="radio" name="frequency" id="daily" value="daily" {% if settings.notification_period == 'daily' %}checked{% endif %}>
         <label class="form-check-label" for="daily">Раз в день</label>
       </div>
       <div class="form-check">
-        <input class="form-check-input" type="radio" name="frequency" id="weekly" value="weekly">
+        <input class="form-check-input" type="radio" name="frequency" id="weekly" value="weekly" {% if settings.notification_period == 'weekly' %}checked{% endif %}>
         <label class="form-check-label" for="weekly">Раз в неделю</label>
       </div>
       <div class="form-check">
-        <input class="form-check-input" type="radio" name="frequency" id="monthly" value="monthly">
+        <input class="form-check-input" type="radio" name="frequency" id="monthly" value="monthly" {% if settings.notification_period == 'monthly' %}checked{% endif %}>
         <label class="form-check-label" for="monthly">Раз в месяц</label>
       </div>
     </fieldset>
@@ -31,22 +31,22 @@
     <fieldset>
       <legend class="form-label">Тип уведомлений:</legend>
       <div class="form-check">
-        <input class="form-check-input" type="radio" name="notification_type" id="add" value="add">
+        <input class="form-check-input" type="radio" name="notification_type" id="add" value="add" {% if settings.notification_types == 'add' %}checked{% endif %}>
         <label class="form-check-label" for="add">Добавление нового фильма</label>
       </div>
       <div class="form-check">
-        <input class="form-check-input" type="radio" name="notification_type" id="add_change" value="add_change">
+        <input class="form-check-input" type="radio" name="notification_type" id="add_change" value="add_change" {% if settings.notification_types == 'add_change' %}checked{% endif %}>
         <label class="form-check-label" for="add_change">Добавление нового фильма или изменение имеющегося</label>
       </div>
       <div class="form-check">
-        <input class="form-check-input" type="radio" name="notification_type" id="everything" value="everything">
+        <input class="form-check-input" type="radio" name="notification_type" id="everything" value="everything" {% if settings.notification_types == 'everything' %}checked{% endif %}>
         <label class="form-check-label" for="everything">Все изменения</label>
       </div>
     </fieldset>
 
     <div class="mb-3">
       <label for="email" class="form-label">Ваша почта:</label>
-      <input type="email" class="form-control" id="email" name="email" required>
+      <input type="email" class="form-control" id="email" name="email" value="{{ settings.user_mail }}" required>
     </div>
 
     <button type="submit" class="btn btn-primary" id="savePreferences">Сохранить предпочтения</button>
