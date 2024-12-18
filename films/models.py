@@ -117,8 +117,8 @@ class NotificationSettings(MyModel):
         "Почта пользователя", max_length=1024, blank=True, null=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE,
                                 related_name='notification_settings')
-    notification_types = models.CharField(max_length=20, default='everything')
-    notification_period = models.CharField(max_length=20, default='daily')
+    notification_types = models.CharField(max_length=20)
+    notification_period = models.CharField(max_length=20)
 
     class Meta:
         verbose_name = 'Notification Setting'
