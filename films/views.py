@@ -229,6 +229,10 @@ def person_delete(request, id):
     return render(request, 'films/person/delete.html',
                   {'person': person})
 
+def notifications_list(request):
+    countries = Country.objects.all()
+    return render(request, 'films/notifications.html', {'countries': countries})
+
 
 class PersonAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):

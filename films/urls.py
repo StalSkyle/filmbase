@@ -39,4 +39,5 @@ urlpatterns = [
          views.person_delete, name='person_delete'),
     path('people/autocomplete/',
          views.PersonAutocomplete.as_view(), name='person_autocomplete'),
+    path('notifications/', views.notifications_list, name='notifications'),
 ]
