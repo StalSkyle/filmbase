@@ -104,7 +104,7 @@ class NotificationSettings(MyModel):
     NOTIFICATION_TYPE_CHOICES = [
         ('add', 'Добавление нового фильма'),
         ('add_change', 'Добавление нового фильма или изменение имеющегося'),
-        ('everything', 'Все изменения'), # вообще во всех моделях! например персоны и т п
+        ('everything', 'Все изменения'),
     ]
 
     PERIOD_CHOICES = [
