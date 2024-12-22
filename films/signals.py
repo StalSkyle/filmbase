@@ -2,17 +2,43 @@ from django.db.models.signals import pre_save, post_save, post_delete
 from django.dispatch import receiver
 from django.core.mail import send_mail
 from .models import Film, Person, Country, Genre, NotificationSettings, User
+from django.conf import settings
+from celery import shared_task
+from django.utils import timezone
+import datetime
 
-# храним старые данные
+
+# храним старые данные (надо ли)
 old_instances = {}
 
+# запланировать отправку сообщения
+@shared_task
+def schedule_notification_email(user_email, subject, message, schedule_time):
+    if timezone.now() >= schedule_time:
+        send_mail(
+            subject,
+            message,
+            's1rodion123@gmail.com',
+            [user_email],
+            fail_silently=True,
+        )
+    else:
+        # если время ещё не настало
+        schedule_notification_email.apply_async(
+            args=[user_email, subject, message],
+            eta=schedule_time
+        )
+
 # изменения в фильме
+
+# а надо ли это ещё вообще
 @receiver(pre_save, sender=Film)
 def store_old_instance(sender, instance, **kwargs):
     if instance.pk:
         # храним старые данные
         old_instances[instance.pk] = sender.objects.get(pk=instance.pk)
 
+# +- готово
 @receiver(post_save, sender=Film)
 def notify_on_save(sender, instance, created, **kwargs):
     if created:
@@ -22,14 +48,14 @@ def notify_on_save(sender, instance, created, **kwargs):
         action = 'add_change'
         message = f"Фильм '{instance.name}' был изменен."
 
-    # Get all users with relevant notification settings
+    # выбираем пользователей с необходимой отметкой
     users = User.objects.filter(
         notification_settings__notification_types__in=[action, 'everything']
     )
 
     for user in users:
-        settings = user.notification_settings
-        if settings.notification_period == 'instant':
+        not_settings = user.notification_settings # notification settings
+        if not_settings.notification_period == 'instant':
             # print(user, user.notification_settings.user_mail)
             try:
                 send_mail(
@@ -41,32 +67,95 @@ def notify_on_save(sender, instance, created, **kwargs):
                 )
             except Exception as e:
                 print(f"Ошибка при отправке email пользователю {user}: {e}")
+        else:
+            if not_settings.notification_period == 'daily': # следующий день 12:00
+                schedule_time = datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=1), datetime.time(12, 0))
+            elif not_settings.notification_period == 'weekly': # следующий понедельник 12:00
+                now = datetime.datetime.now()
+                if now.weekday() == 0 and now.hour < 12:
+                    next_monday = now.replace(hour=12, minute=0, second=0,
+                                              microsecond=0)
+                else:
+                    days_ahead = (7 - now.weekday()) % 7
+                    if days_ahead == 0:
+                        days_ahead = 7
+                    next_monday = now + datetime.timedelta(days=days_ahead)
+                    schedule_time = next_monday.replace(hour=12, minute=0,
+                                                      second=0, microsecond=0)
+            elif not_settings.notification_period == 'monthly': # первое число следующего месяца, 12:00
+                current_date = datetime.datetime.now()
+                if current_date.month == 12:
+                    next_month = 1
+                    next_year = current_date.year + 1
+                else:
+                    next_month = current_date.month + 1
+                    next_year = current_date.year
+                schedule_time = datetime.datetime(next_year, next_month,
+                                                        1, 12, 0)
+            # запланировать отправку
+            schedule_notification_email.apply_async(
+                args=[user.email, f"Уведомление о фильме: {action}", message],
+                eta=schedule_time
+            )
 
-
+# что тут вообще происходит
 @receiver(post_delete, sender=Film)
 def notify_on_delete(sender, instance, **kwargs):
-    # Get all users with 'instant' notifications and appropriate types
-    users_to_notify = NotificationSettings.objects.filter(
-        notification_period='instant',
-        notification_types__in=['add_change', 'everything']
-    ).select_related('user')
+    action = 'everything'  # Deletion is only covered under 'everything'
+    message = f"Фильм '{instance.name}' был удален."
 
-    for setting in users_to_notify:
-        user = setting.user
-        user_email = setting.user_email if setting.user_email else user.email
-        if not user_email:
-            continue  # Skip if no email is provided
+    # Get all users who have 'everything' notification type
+    users = User.objects.filter(
+        notification_settings__notification_types='everything'
+    )
 
-        subject = 'Фильм удален'
-        message = f"Удалён фильм {instance.name}"
+    for user in users:
+        not_settings = user.notification_settings
+        if settings.notification_period == 'instant':
+            try:
+                send_mail(
+                    action,
+                    message,
+                    's1rodion123@gmail.com',
+                    [user.notification_settings.user_mail],
+                    fail_silently=True,
+                )
+            except Exception as e:
+                print(f"Ошибка при отправке email пользователю {user}: {e}")
+        else:
+            if not_settings.notification_period == 'daily':  # следующий день 12:00
+                schedule_time = datetime.datetime.combine(
+                    datetime.date.today() + datetime.timedelta(days=1),
+                    datetime.time(12, 0))
+            elif not_settings.notification_period == 'weekly':  # следующий понедельник 12:00
+                now = datetime.datetime.now()
+                if now.weekday() == 0 and now.hour < 12:
+                    next_monday = now.replace(hour=12, minute=0, second=0,
+                                              microsecond=0)
+                else:
+                    days_ahead = (7 - now.weekday()) % 7
+                    if days_ahead == 0:
+                        days_ahead = 7
+                    next_monday = now + datetime.timedelta(days=days_ahead)
+                    schedule_time = next_monday.replace(hour=12, minute=0,
+                                                        second=0,
+                                                        microsecond=0)
+            elif not_settings.notification_period == 'monthly':  # первое число следующего месяца, 12:00
+                current_date = datetime.datetime.now()
+                if current_date.month == 12:
+                    next_month = 1
+                    next_year = current_date.year + 1
+                else:
+                    next_month = current_date.month + 1
+                    next_year = current_date.year
+                schedule_time = datetime.datetime(next_year, next_month,
+                                                  1, 12, 0)
 
-        send_mail(
-            subject=subject,
-            message=message,
-            from_email='s1rodion123@gmail.com',
-            recipient_list=[user_email],
-            fail_silently=False,
-        )
+            # запланировать отправку
+            schedule_notification_email.apply_async(
+                args=[user.email, f"Уведомление о фильме: {action}", message],
+                eta=schedule_time
+            )
 
 
 # изменения у актёра
