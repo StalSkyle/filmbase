@@ -6,77 +6,99 @@ from django.conf import settings
 from celery import shared_task
 import datetime
 
-# запланировать отправку уведомления
+# отправить уведомление определенному пользователю
 @shared_task
-def schedule_notification_email(user_email, subject, message, schedule_time):
-    print(user_email)
-    if datetime.datetime.now() >= schedule_time:
-        send_mail(
-            subject,
-            message,
-            's1rodion123@gmail.com',
-            [user_email],
-            fail_silently=True,
+def schedule_notification_email(user_email, subject, message):
+    send_mail(
+        subject,
+        message,
+        's1rodion123@gmail.com',
+        [user_email],
+        fail_silently=True,
+    )
+    # получить пользователя и его настройки уведомлений
+    user = User.objects.get(notification_settings__user_mail=user_email)
+    period = user.notification_settings.notification_period
+    if period != 'instant': # передвинуть дату вперед
+        reschedule_notification.apply_async(
+            args=[user.id, period, subject, message],
+            eta=get_schedule_time(period)
         )
-    else:
-        # если время ещё не настало
-        schedule_notification_email.apply_async(
-            args=[user_email, subject, message, schedule_time]
-        )
+
+# передвинуть дату, когда в следующий раз уведомить
+@shared_task
+def reschedule_notification(user_id, period, subject, message):
+    user = User.objects.get(id=user_id)
+    schedule_time = get_schedule_time(period)
+    schedule_notification_email.apply_async(
+        args=[user.notification_settings.user_mail, subject, message],
+        eta=schedule_time
+    )
 
 # получить дату отправки письма
 def get_schedule_time(period):
-    schedule_time = '' #?
-    if period == 'daily':  # следующий день 12:00
-        schedule_time = datetime.datetime.combine(
-            datetime.date.today() + datetime.timedelta(days=1),
-            datetime.time(12, 0))
-    elif period == 'weekly':  # следующий понедельник 12:00
-        now = datetime.datetime.now()
-        if now.weekday() == 0 and now.hour < 12:
-            schedule_time = now.replace(hour=12, minute=0, second=0,
-                                        microsecond=0)
+    now = datetime.datetime.now()
+    if period == 'daily':
+        # следующий день в 12:00
+        next_time = now.replace(hour=12, minute=0, second=0, microsecond=0)
+        if next_time < now:
+            next_time += datetime.timedelta(days=1)
+        return next_time
+    elif period == 'weekly':
+        # следующий понедельник в 12:00
+        days_ahead = (7 - now.weekday()) % 7
+        next_time = now + datetime.timedelta(days=days_ahead)
+        next_time = next_time.replace(hour=12, minute=0, second=0, microsecond=0)
+        if next_time < now:
+            next_time += datetime.timedelta(days=7)
+        return next_time
+    elif period == 'monthly':
+        # первый день следующего месяца, 12:00
+        if now.day == 1 and now.hour < 12:
+            year = now.year
+            month = now.month
         else:
-            days_ahead = (7 - now.weekday()) % 7
-            if days_ahead == 0:
-                days_ahead = 7
-            next_monday = now + datetime.timedelta(days=days_ahead)
-            schedule_time = next_monday.replace(hour=12, minute=0,
-                                                second=0, microsecond=0)
-    elif period.notification_period == 'monthly':  # первое число следующего месяца, 12:00
-        current_date = datetime.datetime.now()
-        if current_date.month == 12:
-            next_month = 1
-            next_year = current_date.year + 1
-        else:
-            next_month = current_date.month + 1
-            next_year = current_date.year
-        schedule_time = datetime.datetime(next_year, next_month,
-                                          1, 12, 0)
-    return schedule_time
+            if now.month == 12:
+                year = now.year + 1
+                month = 1
+            else:
+                year = now.year
+                month = now.month + 1
+        next_time = datetime.datetime(year, month, 1, 12, 0)
+        if next_time < now:
+            if month == 1:
+                year += 1
+            else:
+                month += 1
+            next_time = datetime.datetime(year, month, 1, 12, 0)
+        return next_time
+    else:
+        return now
 
 # отправить или запланировать уведомление
 def send_notification(user, action, message):
-    not_settings = user.notification_settings  # notification settings
-    if not_settings.notification_period == 'instant':
+    not_settings = user.notification_settings
+    period = not_settings.notification_period
+    if period == 'instant':
         try:
             send_mail(
                 action,
                 message,
                 's1rodion123@gmail.com',
-                [user.notification_settings.user_mail],
+                [not_settings.user_mail],
                 fail_silently=True,
             )
         except Exception as e:
             print(f"Ошибка при отправке email пользователю {user}: {e}")
     else:
-        schedule_time = get_schedule_time(not_settings.notification_period)
-        print(user, user.notification_settings.user_mail, schedule_time)
-
-        # запланировать отправку
+        schedule_time = get_schedule_time(period)
+        # планируем уведомление
+        # print('ЗАПЛАНИРОВАЛИ УВЕДОМЛЕНИЕ')
+        # print(not_settings.user_mail)
+        # print(schedule_time)
         schedule_notification_email.apply_async(
-            args=[user.notification_settings.user_mail,
-                  f"Уведомление о фильме: {action}", message, schedule_time]
+            args=[not_settings.user_mail, action, message],
+            eta=schedule_time
         )
 
 
