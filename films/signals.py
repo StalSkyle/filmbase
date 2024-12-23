@@ -14,6 +14,7 @@ MONTHLY_CHANGES = []
 # запланировать отправку сообщения
 @shared_task
 def schedule_notification_email(user_email, subject, message, schedule_time):
+    print(user_email)
     if datetime.datetime.now() >= schedule_time:
         send_mail(
             subject,
@@ -95,7 +96,7 @@ def notify_on_save(sender, instance, created, **kwargs):
 
             # запланировать отправку
             schedule_notification_email.apply_async(
-                args=[user.email, f"Уведомление о фильме: {action}", message, schedule_time]
+                args=[user.notification_settings.user_mail, f"Уведомление о фильме: {action}", message, schedule_time]
             )
 
 # при удалении
@@ -111,7 +112,7 @@ def notify_on_delete(sender, instance, **kwargs):
 
     for user in users:
         not_settings = user.notification_settings
-        if settings.notification_period == 'instant':
+        if not_settings.notification_period == 'instant':
             try:
                 send_mail(
                     action,
@@ -128,7 +129,7 @@ def notify_on_delete(sender, instance, **kwargs):
 
             # запланировать отправку
             schedule_notification_email.apply_async(
-                args=[user.email, f"Уведомление о фильме: {action}", message, schedule_time]
+                args=[user.notification_settings.user_mail, f"Уведомление о фильме: {action}", message, schedule_time]
             )
 
 # ИЗМЕНЕНИЕ ИНФОРМАЦИИ ОБ АКТЁРЕ
@@ -136,18 +137,17 @@ def notify_on_delete(sender, instance, **kwargs):
 # при сохранении
 @receiver(post_save, sender=Person)
 def notify_on_save(sender, instance, created, **kwargs):
-    if created:
-        action = 'everything'
-        message = f"Новый актёр добавлен: {instance.name}"
-    else:
-        action = 'everything'
-        message = f"Информация об актёре '{instance.name}' была изменена."
+    action = 'everything'
+    message = f"Актёр {instance.name} был изменён."
+
+    # получить пользователей, которые подписаны на все уведомления
     users = User.objects.filter(
         notification_settings__notification_types='everything'
     )
+
     for user in users:
         not_settings = user.notification_settings
-        if settings.notification_period == 'instant':
+        if not_settings.notification_period == 'instant':
             try:
                 send_mail(
                     action,
@@ -160,9 +160,13 @@ def notify_on_save(sender, instance, created, **kwargs):
                 print(f"Ошибка при отправке email пользователю {user}: {e}")
         else:
             schedule_time = get_schedule_time(not_settings.notification_period)
+            print(user, user.notification_settings.user_mail, schedule_time)
+
             # запланировать отправку
             schedule_notification_email.apply_async(
-                args=[user.email, f"Уведомление о фильме: {action}", message, schedule_time]
+                args=[user.notification_settings.user_mail,
+                      f"Уведомление об актёре: {action}", message,
+                      schedule_time]
             )
 
 # при удалении актёра
@@ -178,7 +182,7 @@ def notify_on_delete(sender, instance, **kwargs):
 
     for user in users:
         not_settings = user.notification_settings
-        if settings.notification_period == 'instant':
+        if not_settings.notification_period == 'instant':
             try:
                 send_mail(
                     action,
@@ -195,29 +199,147 @@ def notify_on_delete(sender, instance, **kwargs):
 
             # запланировать отправку
             schedule_notification_email.apply_async(
-                args=[user.email, f"Уведомление об актёре: {action}", message,
+                args=[user.notification_settings.user_mail, f"Уведомление об актёре: {action}", message,
                       schedule_time]
             )
 
 # добавление/удаление жанра
 @receiver(post_save, sender=Genre)
 def notify_on_save(sender, instance, created, **kwargs):
-    if created:
-        print(f"Добавлен новый жанр фильмов: {instance.name}")
+    action = 'everything'
+    message = f"Добавлен новый жанр фильмов: {instance.name}"
+
+    # получить пользователей, которые подписаны на все уведомления
+    users = User.objects.filter(
+        notification_settings__notification_types='everything'
+    )
+
+    for user in users:
+        not_settings = user.notification_settings
+        if not_settings.notification_period == 'instant':
+            try:
+                send_mail(
+                    action,
+                    message,
+                    's1rodion123@gmail.com',
+                    [user.notification_settings.user_mail],
+                    fail_silently=True,
+                )
+            except Exception as e:
+                print(f"Ошибка при отправке email пользователю {user}: {e}")
+        else:
+            schedule_time = get_schedule_time(not_settings.notification_period)
+            print(user, user.notification_settings.user_mail, schedule_time)
+
+            # запланировать отправку
+            schedule_notification_email.apply_async(
+                args=[user.notification_settings.user_mail,
+                      f"Уведомление о новом жанре фильмов: {action}", message,
+                      schedule_time]
+            )
 
 
 @receiver(post_delete, sender=Genre)
 def notify_on_delete(sender, instance, **kwargs):
-    print(f"Удалён жанр {instance.name}")
+    action = 'everything'
+    message = f"Жанр фильмов '{instance.name}' был удален."
+
+    # получить пользователей, которые подписаны на все уведомления
+    users = User.objects.filter(
+        notification_settings__notification_types='everything'
+    )
+
+    for user in users:
+        not_settings = user.notification_settings
+        if not_settings.notification_period == 'instant':
+            try:
+                send_mail(
+                    action,
+                    message,
+                    's1rodion123@gmail.com',
+                    [user.notification_settings.user_mail],
+                    fail_silently=True,
+                )
+            except Exception as e:
+                print(f"Ошибка при отправке email пользователю {user}: {e}")
+        else:
+            schedule_time = get_schedule_time(not_settings.notification_period)
+            print(user, user.notification_settings.user_mail, schedule_time)
+
+            # запланировать отправку
+            schedule_notification_email.apply_async(
+                args=[user.notification_settings.user_mail,
+                      f"Уведомление об актёре: {action}", message,
+                      schedule_time]
+            )
 
 
 # добавление/удаление страны
 @receiver(post_save, sender=Country)
 def notify_on_save(sender, instance, created, **kwargs):
-    if created:
-        print(f"Теперь можно посмотреть фильмы из страны {instance.name}")
+    action = 'everything'
+    message = f"Теперь можно посмотреть фильмы из страны {instance.name}"
+
+    # получить пользователей, которые подписаны на все уведомления
+    users = User.objects.filter(
+        notification_settings__notification_types='everything'
+    )
+
+    for user in users:
+        not_settings = user.notification_settings
+        if not_settings.notification_period == 'instant':
+            try:
+                send_mail(
+                    action,
+                    message,
+                    's1rodion123@gmail.com',
+                    [user.notification_settings.user_mail],
+                    fail_silently=True,
+                )
+            except Exception as e:
+                print(f"Ошибка при отправке email пользователю {user}: {e}")
+        else:
+            schedule_time = get_schedule_time(not_settings.notification_period)
+            print(user, user.notification_settings.user_mail, schedule_time)
+
+            # запланировать отправку
+            schedule_notification_email.apply_async(
+                args=[user.notification_settings.user_mail,
+                      f"Уведомление о новой стране выпуска фильмов: {action}", message,
+                      schedule_time]
+            )
 
 
 @receiver(post_delete, sender=Country)
 def notify_on_delete(sender, instance, **kwargs):
-    print(f"Больше нет фильмов из страны {instance.name}")
+    action = 'everything'
+    message = f"Больше нет фильмов из страны {instance.name}."
+
+    # получить пользователей, которые подписаны на все уведомления
+    users = User.objects.filter(
+        notification_settings__notification_types='everything'
+    )
+
+    for user in users:
+        not_settings = user.notification_settings
+        if not_settings.notification_period == 'instant':
+            try:
+                send_mail(
+                    action,
+                    message,
+                    's1rodion123@gmail.com',
+                    [user.notification_settings.user_mail],
+                    fail_silently=True,
+                )
+            except Exception as e:
+                print(f"Ошибка при отправке email пользователю {user}: {e}")
+        else:
+            schedule_time = get_schedule_time(not_settings.notification_period)
+            print(user, user.notification_settings.user_mail, schedule_time)
+
+            # запланировать отправку
+            schedule_notification_email.apply_async(
+                args=[user.notification_settings.user_mail,
+                      f"Больше нет фильмов из страны {action}", message,
+                      schedule_time]
+            )
