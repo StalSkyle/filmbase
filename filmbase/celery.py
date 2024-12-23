@@ -1,6 +1,7 @@
 from __future__ import absolute_import, unicode_literals
 import os
 from celery import Celery
+from celery.schedules import crontab
 from django.conf import settings
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'filmbase.settings')
@@ -16,3 +17,18 @@ app.conf.update(
 )
 
 app.autodiscover_tasks()
+
+app.conf.beat_schedule = {
+    'send-daily-changes': {
+        'task': 'your_app.send_daily_changes',
+        'schedule': crontab(hour='12', minute='0'),
+    },
+    'send-weekly-changes': {
+        'task': 'your_app.send_weekly_changes',
+        'schedule': crontab(hour='12', minute='0', day_of_week='monday'),
+    },
+    'send-monthly-changes': {
+        'task': 'your_app.send_monthly_changes',
+        'schedule': crontab(hour='12', minute='0', day_of_month='1'),
+    },
+}
