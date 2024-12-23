@@ -4,7 +4,6 @@ from django.core.mail import send_mail
 from .models import Film, Person, Country, Genre, NotificationSettings, User
 from django.conf import settings
 from celery import shared_task
-from django.utils import timezone
 import datetime
 
 
@@ -14,7 +13,7 @@ old_instances = {}
 # запланировать отправку сообщения
 @shared_task
 def schedule_notification_email(user_email, subject, message, schedule_time):
-    if timezone.now() >= schedule_time:
+    if datetime.datetime.now() >= schedule_time:
         send_mail(
             subject,
             message,
@@ -25,8 +24,7 @@ def schedule_notification_email(user_email, subject, message, schedule_time):
     else:
         # если время ещё не настало
         schedule_notification_email.apply_async(
-            args=[user_email, subject, message],
-            eta=schedule_time
+            args=[user_email, subject, message, schedule_time]
         )
 
 # изменения в фильме
@@ -73,7 +71,7 @@ def notify_on_save(sender, instance, created, **kwargs):
             elif not_settings.notification_period == 'weekly': # следующий понедельник 12:00
                 now = datetime.datetime.now()
                 if now.weekday() == 0 and now.hour < 12:
-                    next_monday = now.replace(hour=12, minute=0, second=0,
+                    schedule_time = now.replace(hour=12, minute=0, second=0,
                                               microsecond=0)
                 else:
                     days_ahead = (7 - now.weekday()) % 7
@@ -92,10 +90,11 @@ def notify_on_save(sender, instance, created, **kwargs):
                     next_year = current_date.year
                 schedule_time = datetime.datetime(next_year, next_month,
                                                         1, 12, 0)
+
+            print(user, user.notification_settings.user_mail, schedule_time)
             # запланировать отправку
             schedule_notification_email.apply_async(
-                args=[user.email, f"Уведомление о фильме: {action}", message],
-                eta=schedule_time
+                args=[user.email, f"Уведомление о фильме: {action}", message, schedule_time]
             )
 
 # что тут вообще происходит

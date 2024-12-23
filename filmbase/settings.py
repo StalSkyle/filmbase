@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'films.apps.FilmsConfig',
-    'django_extensions'
+    'django_extensions',
+    'django_celery_results',
 ]
 
 MIDDLEWARE = [
@@ -151,4 +152,8 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_BROKER_CONNECTION_RETRY_ON_SETUP = True
-CELERY_TIMEZONE = 'Etc/GMT-3'
+CELERY_TIMEZONE = 'UTC'
+
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
