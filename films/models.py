@@ -119,9 +119,9 @@ class NotificationSettings(MyModel):
                                 related_name='notification_settings')
     notification_types = models.CharField(max_length=20)
     notification_period = models.CharField(max_length=20)
-    daily_changes = models.TextField(blank=True)
-    weekly_changes = models.TextField(blank=True)
-    monthly_changes = models.TextField(blank=True)
+    daily_changes = models.TextField(blank=True, null=True)
+    weekly_changes = models.TextField(blank=True, null=True)
+    monthly_changes = models.TextField(blank=True, null=True)
 
     class Meta:
         verbose_name = 'Notification Setting'
