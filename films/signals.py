@@ -4,78 +4,98 @@ from django.core.mail import send_mail
 from .models import Film, Person, Country, Genre, NotificationSettings, User
 from django.conf import settings
 from celery import shared_task
+from django.utils import timezone
+from django.utils.timezone import make_aware
 import datetime
 
-# отправить уведомление определенному пользователю
+# Celery task to send daily changes
 @shared_task
-def schedule_notification_email(user_email, subject, message):
-    send_mail(
-        subject,
-        message,
-        's1rodion123@gmail.com',
-        [user_email],
-        fail_silently=True,
-    )
-    # получить пользователя и его настройки уведомлений
-    user = User.objects.get(notification_settings__user_mail=user_email)
-    period = user.notification_settings.notification_period
-    if period != 'instant': # передвинуть дату вперед
-        reschedule_notification.apply_async(
-            args=[user.id, period, subject, message],
-            eta=get_schedule_time(period)
-        )
+def send_daily_changes():
+    users = User.objects.filter(notification_settings__notification_period='daily')
+    for user in users:
+        not_settings = user.notification_settings
+        if not_settings.daily_changes:
+            send_mail(
+                'Ежедневные изменения',
+                not_settings.daily_changes,
+                's1rodion123@gmail.com',
+                [not_settings.user_mail],
+                fail_silently=True,
+            )
+            # очистить ежедневные изменения после отправки
+            not_settings.daily_changes = ''
+            not_settings.save()
 
-# передвинуть дату, когда в следующий раз уведомить
+# Celery task to send weekly changes
 @shared_task
-def reschedule_notification(user_id, period, subject, message):
-    user = User.objects.get(id=user_id)
-    schedule_time = get_schedule_time(period)
-    schedule_notification_email.apply_async(
-        args=[user.notification_settings.user_mail, subject, message],
-        eta=schedule_time
-    )
+def send_weekly_changes():
+    users = User.objects.filter(notification_settings__notification_period='weekly')
+    for user in users:
+        not_settings = user.notification_settings
+        if not_settings.weekly_changes:
+            send_mail(
+                'Weekly Changes',
+                not_settings.weekly_changes,
+                's1rodion123@gmail.com',
+                [not_settings.user_mail],
+                fail_silently=True,
+            )
+            # Clear the weekly_changes after sending
+            not_settings.weekly_changes = ''
+            not_settings.save()
 
-# получить дату отправки письма
-def get_schedule_time(period):
-    now = datetime.datetime.now()
-    if period == 'daily':
-        # следующий день в 12:00
-        next_time = now.replace(hour=12, minute=0, second=0, microsecond=0)
-        if next_time < now:
-            next_time += datetime.timedelta(days=1)
-        return next_time
-    elif period == 'weekly':
-        # следующий понедельник в 12:00
-        days_ahead = (7 - now.weekday()) % 7
-        next_time = now + datetime.timedelta(days=days_ahead)
-        next_time = next_time.replace(hour=12, minute=0, second=0, microsecond=0)
-        if next_time < now:
-            next_time += datetime.timedelta(days=7)
-        return next_time
-    elif period == 'monthly':
-        # первый день следующего месяца, 12:00
-        if now.day == 1 and now.hour < 12:
-            year = now.year
-            month = now.month
-        else:
-            if now.month == 12:
-                year = now.year + 1
-                month = 1
-            else:
-                year = now.year
-                month = now.month + 1
-        next_time = datetime.datetime(year, month, 1, 12, 0)
-        if next_time < now:
-            if month == 1:
-                year += 1
-            else:
-                month += 1
-            next_time = datetime.datetime(year, month, 1, 12, 0)
-        return next_time
+# Celery task to send monthly changes
+@shared_task
+def send_monthly_changes():
+    users = User.objects.filter(notification_settings__notification_period='monthly')
+    for user in users:
+        not_settings = user.notification_settings
+        if not_settings.monthly_changes:
+            send_mail(
+                'Monthly Changes',
+                not_settings.monthly_changes,
+                's1rodion123@gmail.com',
+                [not_settings.user_mail],
+                fail_silently=True,
+            )
+            # Clear the monthly_changes after sending
+            not_settings.monthly_changes = ''
+            not_settings.save()
+
+# Celery task to schedule the sending tasks
+@shared_task
+def schedule_notification_tasks():
+    now = timezone.now()
+    # Schedule daily task for tomorrow at 12:00
+    tomorrow = now + datetime.timedelta(days=1)
+    tomorrow = tomorrow.replace(hour=12, minute=0, second=0, microsecond=0)
+    send_daily_changes.apply_async(eta=tomorrow)
+    # Schedule weekly task for next Monday at 12:00
+    days_ahead = (7 - now.weekday()) % 7
+    next_monday = now + datetime.timedelta(days=days_ahead)
+    next_monday = next_monday.replace(hour=12, minute=0, second=0, microsecond=0)
+    send_weekly_changes.apply_async(eta=next_monday)
+    # Schedule monthly task for next month's first day at 12:00
+    if now.day == 1 and now.hour < 12:
+        year = now.year
+        month = now.month
     else:
-        return now
+        if now.month == 12:
+            year = now.year + 1
+            month = 1
+        else:
+            year = now.year
+            month = now.month + 1
+    first_day = make_aware(timezone.datetime(year, month, 1, 12, 0))
+    if first_day < now:
+        if month == 1:
+            year += 1
+        else:
+            month += 1
+        first_day = timezone.datetime(year, month, 1, 12, 0)
+    send_monthly_changes.apply_async(eta=first_day)
 
-# отправить или запланировать уведомление
+# Function to send or accumulate notifications
 def send_notification(user, action, message):
     not_settings = user.notification_settings
     period = not_settings.notification_period
@@ -91,15 +111,14 @@ def send_notification(user, action, message):
         except Exception as e:
             print(f"Ошибка при отправке email пользователю {user}: {e}")
     else:
-        schedule_time = get_schedule_time(period)
-        # планируем уведомление
-        # print('ЗАПЛАНИРОВАЛИ УВЕДОМЛЕНИЕ')
-        # print(not_settings.user_mail)
-        # print(schedule_time)
-        schedule_notification_email.apply_async(
-            args=[not_settings.user_mail, action, message],
-            eta=schedule_time
-        )
+        # Append the message to the appropriate field
+        if period == 'daily':
+            not_settings.daily_changes += message + '\n\n'
+        elif period == 'weekly':
+            not_settings.weekly_changes += message + '\n\n'
+        elif period == 'monthly':
+            not_settings.monthly_changes += message + '\n\n'
+        not_settings.save()
 
 
 # ИЗМЕНЕНИЕ ИНФОРМАЦИИ О ФИЛЬМЕ
@@ -225,3 +244,5 @@ def notify_on_delete(sender, instance, **kwargs):
 
     for user in users:
         send_notification(user, action, message)
+
+schedule_notification_tasks.delay()
