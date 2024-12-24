@@ -20,15 +20,23 @@ app.autodiscover_tasks()
 
 app.conf.beat_schedule = {
     'send-daily-changes': {
-        'task': 'your_app.send_daily_changes',
-        'schedule': crontab(hour='12', minute='0'),
+        'task': 'films.send_daily_changes',
+        # 'schedule': crontab(hour='12', minute='0'),
+        'schedule': crontab(minute='*/1'),
     },
     'send-weekly-changes': {
-        'task': 'your_app.send_weekly_changes',
+        'task': 'films.send_weekly_changes',
         'schedule': crontab(hour='12', minute='0', day_of_week='monday'),
     },
     'send-monthly-changes': {
-        'task': 'your_app.send_monthly_changes',
+        'task': 'films.send_monthly_changes',
         'schedule': crontab(hour='12', minute='0', day_of_month='1'),
     },
+    'print-test-message-every-minute': {
+        'task': 'films.tasks.print_test_message',
+        'schedule': crontab(minute='*'),  # Выполняется каждую минуту
+    },
 }
+@app.task(bind=True)
+def debug_task(self):
+    print(f'Request: {self.request!r}')

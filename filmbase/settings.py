@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'films.apps.FilmsConfig',
     'django_extensions',
     'django_celery_results',
+    'django_celery_beat'
 ]
 
 MIDDLEWARE = [
