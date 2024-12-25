@@ -1,7 +1,8 @@
+from django.core.mail import send_mail
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
-from django.core.mail import send_mail
-from .models import Film, Person, Country, Genre, NotificationSettings, User
+
+from .models import Film, Person, Country, Genre, User
 
 
 # отправить уведомления или изменить поля у пользователей
@@ -48,7 +49,8 @@ def notify_on_save(sender, instance, created, **kwargs):
     )
 
     for user in users:
-        send_notification(user, action, message)
+        send_notification(user, "Уведомление с проекта filmbase", message)
+
 
 # при удалении
 @receiver(post_delete, sender=Film)
@@ -62,15 +64,18 @@ def notify_on_delete(sender, instance, **kwargs):
     )
 
     for user in users:
-        send_notification(user, action, message)
+        send_notification(user, "Уведомление с проекта filmbase", message)
+
 
 # ИЗМЕНЕНИЕ ИНФОРМАЦИИ ОБ АКТЁРЕ
 
 # при сохранении
 @receiver(post_save, sender=Person)
 def notify_on_save(sender, instance, created, **kwargs):
-    action = 'everything'
-    message = f"Актёр {instance.name} был изменён."
+    if created:
+        message = f"Новый актёр добавлен: {instance.name}"
+    else:
+        message = f"Актёр {instance.name} был изменён."
 
     # получить пользователей, которые подписаны на все уведомления
     users = User.objects.filter(
@@ -78,7 +83,8 @@ def notify_on_save(sender, instance, created, **kwargs):
     )
 
     for user in users:
-        send_notification(user, action, message)
+        send_notification(user, "Уведомление с проекта filmbase", message)
+
 
 # при удалении актёра
 @receiver(post_delete, sender=Person)
@@ -92,7 +98,8 @@ def notify_on_delete(sender, instance, **kwargs):
     )
 
     for user in users:
-        send_notification(user, action, message)
+        send_notification(user, "Уведомление с проекта filmbase", message)
+
 
 # ИЗМЕНЕНИЕ ИНФОРМАЦИИ О ЖАНРЕ
 
@@ -108,7 +115,8 @@ def notify_on_save(sender, instance, created, **kwargs):
     )
 
     for user in users:
-        send_notification(user, action, message)
+        send_notification(user, "Уведомление с проекта filmbase", message)
+
 
 # удаление
 @receiver(post_delete, sender=Genre)
@@ -122,7 +130,8 @@ def notify_on_delete(sender, instance, **kwargs):
     )
 
     for user in users:
-        send_notification(user, action, message)
+        send_notification(user, "Уведомление с проекта filmbase", message)
+
 
 # ИЗМЕНЕНИЕ ИНФОРМАЦИИ О СТРАНЕ
 
@@ -138,7 +147,8 @@ def notify_on_save(sender, instance, created, **kwargs):
     )
 
     for user in users:
-        send_notification(user, action, message)
+        send_notification(user, "Уведомление с проекта filmbase", message)
+
 
 # удаление
 @receiver(post_delete, sender=Country)
@@ -152,4 +162,4 @@ def notify_on_delete(sender, instance, **kwargs):
     )
 
     for user in users:
-        send_notification(user, action, message)
+        send_notification(user, "Уведомление с проекта filmbase", message)
